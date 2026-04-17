@@ -1,0 +1,30 @@
+services:
+  # --- Aggregator (受信側、独立コンテナ) ---
+  fluent-bit-aggregator:
+    image: fluent/fluent-bit:latest
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.yaml"]
+    volumes:
+      - ./conf/aggregator-conf.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+    ports:
+      - "24224:24224"
+
+  # --- Go App ---
+  app:
+    build: .
+    volumes:
+      - app-logs:/var/log/app
+
+  # --- Sidecar Fluent Bit ---
+  fluent-bit-sidecar:
+    image: fluent/fluent-bit:latest
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.yaml"]
+    volumes:
+      - app-logs:/var/log/app:ro
+      - ./conf/sidecar-conf.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+    depends_on:
+      - app
+      - fluent-bit-aggregator
+
+volumes:
+  app-logs:
+

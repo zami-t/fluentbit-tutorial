@@ -1,0 +1,19 @@
+service:
+  flush: 1
+  log_level: info
+  parsers_file: /fluent-bit/etc/parsers.conf
+
+pipeline:
+  inputs:
+    - name: tail
+      path: /var/log/app/app.log
+      parser: json
+      tag: app.logs
+      refresh_interval: 5
+      read_from_head: true
+
+  outputs:
+    - name: forward
+      match: "*"
+      host: fluent-bit-aggregator
+      port: 24224

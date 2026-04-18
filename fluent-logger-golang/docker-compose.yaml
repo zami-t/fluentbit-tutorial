@@ -1,0 +1,8 @@
+services:
+  fluentd:
+    image: fluent/fluentd:v1.17-debian-1
+    command: [ "fluentd", "-c", "/fluentd/etc/fluent.conf", "-v" ]
+    volumes:
+      - ./fluent.conf:/fluentd/etc/fluent.conf:ro
+    ports:
+      - "24224:24224"

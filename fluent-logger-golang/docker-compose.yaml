@@ -1,8 +1,8 @@
 services:
   fluentd:
-    image: fluent/fluentd:v1.17-debian-1
-    command: [ "fluentd", "-c", "/fluentd/etc/fluent.conf", "-v" ]
+    image: fluent/fluent-bit:latest
+    command: [ "fluentd", "-c", "/fluentd/etc/fluent-conf.yaml" ]
     volumes:
-      - ./fluent.conf:/fluentd/etc/fluent.conf:ro
+      - ./fluent-conf.yaml:/fluentd/etc/fluent-conf.yaml:ro
     ports:
       - "24224:24224"

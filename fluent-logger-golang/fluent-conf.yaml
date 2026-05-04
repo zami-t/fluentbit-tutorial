@@ -1,0 +1,11 @@
+service:
+  storage.path: /var/log/flb-storage/
+  storage.type: filesystem
+  storage.inherit: on
+pipeline:
+  inputs:
+    - name: tail
+      path: /var/log/app/*.log
+      tag: app.*
+      mem_buf_limit: 50MB
+

@@ -1,0 +1,68 @@
+service:
+  flush: 1
+  daemon: off
+  log_level: info
+  http_server: on
+  http_listen: 0.0.0.0
+  http_port: 2020
+
+  # input pluginのdefaultのbuffering modeをfilesystemにする
+  storage.type: filesystem
+  storage.inherit: on
+  # filesystem バッファの保管先（emptyDir などで永続化推奨）
+  storage.path: /var/log/flb-storage/
+  storage.keep.rejected: on      # DLQ機能を有効化
+  storage.rejected.path: rejected # DLQデータ保存先(/var/log/flb-storage/rejected/)
+  storage.rejected.limit: 500M # DLQデータ保存上限
+  storage.sync: full           # 常にdiskへの書き込みまでを一貫し行う
+  storage.checksum: on
+  # 起動時に既存のディスクチャンクを最大どれだけメモリに復元するか
+  # fluent-bitがもつbuiltinのstorage_backlogというpluginに関する設定
+  storage.backlog.mem_limit: 64M
+  # filesystem 利用時のメモリ上にあげるチャンクの上限（全input共有）
+  storage.max_chunks_up: 128
+  storage.metrics: on
+
+parsers:
+  - name: json
+    format: json
+
+pipeline:
+  inputs:
+    - name: tail
+      tag: app.*
+      # ローテート後ファイルも拾うため glob にする
+      path: /var/log/app/app.log,/var/log/app/app.log.*
+      # 圧縮済みは読まない（必要に応じて）
+      exclude_path: /var/log/app/*.gz,/var/log/app/*.zip
+      # JSON ログ前提
+      parser: json
+      # 起動直後に未送信分も最初から読み直す（ロスト防止に重要）
+      read_from_head: true
+      # オフセット永続化（再起動時の重複/欠落防止に必須）
+      db: /var/log/flb-storage/tail.db
+      db.sync: normal
+      # ローテート後、後続イベントを取りこぼさないため十分な猶予を取る
+      rotate_wait: 30
+      # ファイル一覧の再スキャン間隔
+      refresh_interval: 5
+      # 異常に長い行はスキップ（ファイル除外を防ぐ）
+      skip_long_lines: on
+      skip_empty_lines: on
+      # 監視ファイルごとに確保するメモリバッファの初期サイズ
+      # 1行がこのサイズを超えると buffer_max_size まで拡張される
+      buffer_chunk_size: 1M
+      buffer_max_size: 1M
+      # 出力先が詰まってもデータを失わないよう off のまま
+      # （on にすると tail が一時停止しロスト原因になる）
+      storage.pause_on_chunks_overlimit: off
+
+  outputs:
+    - name: forward                # ここは送信先に応じて変更（http, es, loki 等）
+      match: app.*
+      host: fluent-bit-aggregator
+      port: 24224
+      # 送信失敗時は3回リトライ
+      retry_limit: 3
+      net.connect_timeout: 10
+      net.keepalive: on

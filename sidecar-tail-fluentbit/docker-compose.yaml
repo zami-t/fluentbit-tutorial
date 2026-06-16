@@ -1,7 +1,8 @@
 services:
   # --- Aggregator (受信側、独立コンテナ) ---
-  fluent-bit-aggregator:
+  aggregator:
     image: fluent/fluent-bit:3.2.10
+    container_name: flb-aggregator
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.yaml"]
     volumes:
       - ./conf/aggregator-conf.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
@@ -17,18 +18,18 @@ services:
       retries: 5
       start_period: 5s
     restart: unless-stopped
-
   # --- Go App ---
   app:
     build: .
+    container_name: flb-app
     volumes:
       # sidecar とログファイルを共有
       - app-logs:/var/log/app
     restart: unless-stopped
-
   # --- Sidecar Fluent Bit ---
-  fluent-bit-sidecar:
+  sidecar:
     image: fluent/fluent-bit:5.0.5-debug
+    container_name: flb-sidecar
     command: ["/fluent-bit/bin/fluent-bit", "-c", "/fluent-bit/etc/fluent-bit.yaml"]
     volumes:
       - ./conf/sidecar-conf.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
@@ -42,10 +43,9 @@ services:
     depends_on:
       app:
         condition: service_started
-      fluent-bit-aggregator:
+      aggregator:
         condition: service_healthy
     restart: unless-stopped
-
 volumes:
   app-logs:
   sidecar-storage:

@@ -60,7 +60,7 @@ pipeline:
   outputs:
     - name: forward                # ここは送信先に応じて変更（http, es, loki 等）
       match: app.*
-      host: fluent-bit-aggregator
+      host: aggregator
       port: 24224
       # 送信失敗時は3回リトライ
       retry_limit: 3

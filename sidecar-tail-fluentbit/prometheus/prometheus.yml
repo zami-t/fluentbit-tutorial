@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: fluent-bit-sidecar
+    metrics_path: /api/v2/metrics/prometheus   # v2 はパスが /metrics ではない点に注意
+    static_configs:
+      - targets: ['sidecar:2020']
+        labels:
+          role: sidecar
+
+  # aggregator も監視したい場合（aggregator も http_server が有効なら）
+  - job_name: fluent-bit-aggregator
+    metrics_path: /api/v2/metrics/prometheus
+    static_configs:
+      - targets: ['aggregator:2020']
+        labels:
+          role: aggregator
+

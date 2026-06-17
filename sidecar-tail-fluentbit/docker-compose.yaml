@@ -18,6 +18,7 @@ services:
       retries: 5
       start_period: 5s
     restart: unless-stopped
+
   # --- Go App ---
   app:
     build: .
@@ -26,6 +27,7 @@ services:
       # sidecar とログファイルを共有
       - app-logs:/var/log/app
     restart: unless-stopped
+
   # --- Sidecar Fluent Bit ---
   sidecar:
     image: fluent/fluent-bit:5.0.5-debug
@@ -46,7 +48,43 @@ services:
       aggregator:
         condition: service_healthy
     restart: unless-stopped
+
+    # --- Prometheus ---
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: flb-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      sidecar:
+        condition: service_started
+    restart: unless-stopped
+
+    # --- Grafana ---
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: flb-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin   # 検証用。実運用では必ず変更
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   app-logs:
   sidecar-storage:
   aggregator-buffer:
+  prometheus-data:
+  grafana-data:
+
+
